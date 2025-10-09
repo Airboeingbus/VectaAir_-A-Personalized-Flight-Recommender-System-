@@ -1,8 +1,0 @@
-venv/
-__pycache__/
-*.pyc
-*.pkl
-*.pt
-data/raw/
-data/processed/
-.ipynb_checkpoints/
