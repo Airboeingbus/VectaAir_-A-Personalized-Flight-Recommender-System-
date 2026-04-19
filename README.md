@@ -498,17 +498,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 👥 Authors
 
-- **Your Name** - Initial development
+- **Airboeingbus** - Initial development
 - Contributors welcome!
-
----
-
-## 🙏 Acknowledgments
-
-- Flask team for the excellent web framework
-- scikit-learn for ML algorithms
-- Pandas team for data manipulation tools
-
 ---
 
 ## 📧 Contact & Support
