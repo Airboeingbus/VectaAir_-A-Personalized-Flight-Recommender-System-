@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Recommendation System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <!-- Header with Blue Gradient -->
+    <header class="header-gradient">
+        <div class="header-content">
+            <h1 class="title">✈ Flight Recommendation System</h1>
+            <p class="subtitle">Powered by Hybrid Graph Recommender + Flight Reliability</p>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        
+        <!-- Left Panel: Inputs (40%) -->
+        <div class="left-panel">
+            <div class="panel input-panel">
+                <div class="panel-header">
+                    <h2>Search Flights</h2>
+                    <button id="logout-btn" class="btn btn-logout" title="Logout">Logout</button>
+                </div>
+                
+                <div class="panel-body">
+                    <!-- Search Section -->
+                    <div class="input-section">
+                        <div class="form-group">
+                            <label for="origin-input">Departure Airport:</label>
+                            <div class="autocomplete-container">
+                                <input 
+                                    type="text" 
+                                    id="origin-input" 
+                                    class="input-field"
+                                    placeholder="Search by city or code (e.g., Mumbai, BOM)..."
+                                >
+                                <div id="origin-suggestions" class="suggestions hidden"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="destination-input">Destination Airport:</label>
+                            <div class="autocomplete-container">
+                                <input 
+                                    type="text" 
+                                    id="destination-input" 
+                                    class="input-field"
+                                    placeholder="Search by city or code (e.g., Delhi, DEL)..."
+                                >
+                                <div id="destination-suggestions" class="suggestions hidden"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="results-count">Number of Results:</label>
+                            <select id="results-count" class="input-field">
+                                <option value="3">3 Flights</option>
+                                <option value="5" selected>5 Flights</option>
+                                <option value="10">10 Flights</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Trip Planning Section -->
+                    <div class="input-section">
+                        <h4 class="section-title">Trip Type</h4>
+                        <div class="form-group">
+                            <div class="radio-group">
+                                <label>
+                                    <input type="radio" name="trip-type" value="one-way" checked id="trip-one-way">
+                                    One-way
+                                </label>
+                                <label>
+                                    <input type="radio" name="trip-type" value="round-trip" id="trip-round-trip">
+                                    Round-trip
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="departure-date">Departure Date:</label>
+                            <input 
+                                type="date" 
+                                id="departure-date" 
+                                class="input-field"
+                                required
+                            >
+                        </div>
+                        
+                        <div class="form-group" id="return-date-group" style="display: none;">
+                            <label for="return-date">Return Date:</label>
+                            <input 
+                                type="date" 
+                                id="return-date" 
+                                class="input-field"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Basic Preferences Section -->
+                    <div class="input-section">
+                        <h4 class="section-title">Basic Preferences</h4>
+                        <div class="form-group">
+                            <label for="reliability-select">Reliability Priority:</label>
+                            <select id="reliability-select" class="input-field">
+                                <option value="high">High</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="low">Low</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Advanced Preferences Section -->
+                    <div class="input-section">
+                        <h4 class="section-title">Advanced Preferences</h4>
+                        
+                        <div class="form-group">
+                            <label for="price-slider">Price vs Quality</label>
+                            <div class="slider-container">
+                                <input 
+                                    type="range" 
+                                    id="price-slider" 
+                                    min="0" 
+                                    max="100" 
+                                    value="50"
+                                    class="slider-input"
+                                >
+                                <span id="price-label" class="slider-label">Balanced</span>
+                            </div>
+                            <small class="slider-hint">← Cheapest | Balanced | Premium →</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="time-slider">Speed vs Comfort</label>
+                            <div class="slider-container">
+                                <input 
+                                    type="range" 
+                                    id="time-slider" 
+                                    min="0" 
+                                    max="100" 
+                                    value="50"
+                                    class="slider-input"
+                                >
+                                <span id="time-label" class="slider-label">Balanced</span>
+                            </div>
+                            <small class="slider-hint">← Fastest | Balanced | Comfortable →</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="reliability-slider">Reliability Importance</label>
+                            <div class="slider-container">
+                                <input 
+                                    type="range" 
+                                    id="reliability-slider" 
+                                    min="0" 
+                                    max="100" 
+                                    value="50"
+                                    class="slider-input"
+                                >
+                                <span id="reliability-label" class="slider-label">Balanced</span>
+                            </div>
+                            <small class="slider-hint">← Ignore Delays | Balanced | Very Strict →</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="departure-time">Preferred Departure Time:</label>
+                            <select id="departure-time" class="input-field">
+                                <option value="any">Any Time</option>
+                                <option value="morning">Morning (5 AM - 12 PM)</option>
+                                <option value="afternoon">Afternoon (12 PM - 5 PM)</option>
+                                <option value="evening">Evening (5 PM - 10 PM)</option>
+                            </select>
+                        </div>
+                        
+                        <div id="preference-summary" class="preference-summary">
+                            Optimization Mode: <strong id="summary-text">BALANCED</strong>
+                        </div>
+                    </div>
+
+                    <!-- Action Button -->
+                    <button id="search-btn" class="btn btn-primary btn-glossy btn-large">
+                        🔍 Get Recommendations
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Results (60%) -->
+        <div class="right-panel">
+            <div class="panel results-panel">
+                <div class="panel-header">
+                    <h2>Recommendations</h2>
+                    <span id="status-badge" class="status-badge"></span>
+                </div>
+                
+                <div class="panel-body">
+                    <!-- Trip Info Display -->
+                    <div id="trip-info" class="trip-info hidden">
+                        <strong>Trip:</strong> <span id="trip-display-text"></span>
+                    </div>
+
+                    <!-- Loading indicator -->
+                    <div id="loading" class="loading hidden">
+                        <div class="spinner"></div>
+                        <p>Loading recommendations...</p>
+                    </div>
+
+                    <!-- Error message -->
+                    <div id="error-message" class="error-message hidden"></div>
+
+                    <!-- Results table -->
+                    <table id="results-table" class="results-table hidden">
+                        <thead>
+                            <tr class="table-header">
+                                <th class="col-rank">#</th>
+                                <th class="col-flight">Flight ID</th>
+                                <th class="col-score">Final Score</th>
+                                <th class="col-breakdown">Breakdown</th>
+                                <th class="col-rating">Rating</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-tbody">
+                            <!-- Results will be inserted here -->
+                        </tbody>
+                    </table>
+
+                    <!-- Explanation Box (appears below table) -->
+                    <div id="explanation-box" class="explanation-box hidden">
+                        <h4>Why this flight?</h4>
+                        <p id="explanation-text"></p>
+                    </div>
+
+                    <!-- Empty state -->
+                    <div id="empty-state" class="empty-state">
+                        <p class="empty-icon">✈️</p>
+                        <p>Enter departure and destination to get personalized recommendations.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Info Panel (below main) -->
+    <div class="info-section">
+        <div class="panel info-panel">
+            <div class="panel-header">
+                <h2>About This System</h2>
+            </div>
+            
+            <div class="panel-body info-content">
+                <h3>🎯 How It Works</h3>
+                <p>
+                    This hybrid recommender system combines:
+                </p>
+                <ul class="feature-list">
+                    <li><strong>User Similarity Graph:</strong> Finds users with similar preferences</li>
+                    <li><strong>Weighted Scoring:</strong> Uses interaction patterns (bookings, views)</li>
+                    <li><strong>Flight Reliability:</strong> Considers on-time performance data</li>
+                </ul>
+                
+                <h3>📈 Scoring Formula</h3>
+                <p class="formula">
+                    <code>Score = Σ(similarity × weight) × reliability</code>
+                </p>
+                
+                <h3>⭐ Score Interpretation</h3>
+                <div class="score-legend">
+                    <div class="legend-item"><span class="badge badge-high">0.90–1.0</span> Excellent</div>
+                    <div class="legend-item"><span class="badge badge-good">0.75–0.89</span> Good</div>
+                    <div class="legend-item"><span class="badge badge-fair">0.50–0.74</span> Fair</div>
+                    <div class="legend-item"><span class="badge badge-low">Below 0.50</span> Consider Other Options</div>
+                </div>
+                
+                <h3>💡 Tips</h3>
+                <ul class="tips-list">
+                    <li>Try different User IDs (U00001, U00002, etc.)</li>
+                    <li>Check the score to assess recommendation quality</li>
+                    <li>Higher scores = better match + more reliable flight</li>
+                </ul>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>Flight Recommendation System v2.0 | Hybrid Graph + Reliability Scoring | 2026</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

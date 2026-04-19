@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Recommendation System - Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <!-- Header with Blue Gradient -->
+    <header class="header-gradient">
+        <div class="header-content">
+            <h1 class="title">✈ Flight Recommendation System</h1>
+            <p class="subtitle">Powered by Hybrid Graph Recommender + Flight Reliability</p>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="main-container login-container">
+        
+        <!-- Login Panel -->
+        <div class="panel login-panel-main login-box">
+            <div class="panel-header">
+                <h2>Login</h2>
+            </div>
+            
+            <div class="panel-body">
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="login-user-id">User ID:</label>
+                        <input 
+                            type="text" 
+                            id="login-user-id" 
+                            class="input-field"
+                            placeholder="e.g., U00001"
+                            required
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="login-password">Password:</label>
+                        <input 
+                            type="password" 
+                            id="login-password" 
+                            class="input-field"
+                            placeholder="Enter password"
+                            required
+                        >
+                    </div>
+                    
+                    <div id="login-error" class="error-message hidden"></div>
+                    
+                    <button type="submit" id="login-btn" class="btn btn-primary btn-glossy">
+                        🔐 Login
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Info Panel -->
+        <div class="panel info-panel">
+            <div class="panel-header">
+                <h2>Demo Credentials</h2>
+            </div>
+            
+            <div class="panel-body">
+                <h3>Test Users</h3>
+                <ul class="tips-list">
+                    <li><strong>U00001</strong> / pass123</li>
+                    <li><strong>U00002</strong> / abc123</li>
+                    <li><strong>U00003</strong> / secure456</li>
+                    <li><strong>U00004</strong> / travel789</li>
+                    <li><strong>U00005</strong> / flight999</li>
+                </ul>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>Flight Recommendation System v2.0 | Hybrid Graph + Reliability Scoring | 2026</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='login-script.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+# Git ignore rules for Flight Recommendation System
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment & Secrets (CRITICAL)
+.env
+.env.local
+.env.*.local
+.env.secret
+
+# Data (keep structure, ignore contents)
+data/raw/*.csv
+data/processed/*.csv
+data/processed/*.json
+
+# Logs & Cache
+logs/
+*.log
+*.pid
+.pytest_cache/
+
+# Testing
+.coverage
+htmlcov/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb
+
+# Flask
+instance/
+.webassets-cache
+
+# Production builds
+build/
+dist/
+*.egg-info/
+
+
+# Temporary files
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Environment variables
+.env
+.env.local
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoint
+
+# Models (Phase 4+)
+models/
+*.pkl
+*.h5
+*.pth
