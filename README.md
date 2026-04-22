@@ -640,8 +640,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - **GitHub Issues:** [Report bugs here](https://github.com/Airboeingbus/VectaAir/issues)
 - **Discussions:** [Join our community](https://github.com/Airboeingbus/VectaAir/discussions)
-- **Email:** your-email@example.com
-
 ---
-
-**Happy Recommending! 🚀✈️**
