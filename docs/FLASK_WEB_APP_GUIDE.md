@@ -44,7 +44,7 @@ Flight_Recomendor/
 ### Step 1: Ensure Dependencies Are Installed
 
 ```bash
-cd /home/s-p-shaktivell-sunder/Documents/Flight_Recomendor
+cd <path-to-Flight_Recomendor>  # Navigate to project root
 
 # Activate virtual environment
 source .venv/bin/activate
@@ -254,9 +254,9 @@ To add more options, edit `templates/index.html` lines 48-51:
 
 ### Issue: "Module not found: graph_recommender"
 
-**Solution:** Ensure you're running from the `Flight_Recomendor` directory:
+**Solution:** Ensure you're running from the `Flight_Recomendor` directory (project root):
 ```bash
-cd /home/s-p-shaktivell-sunder/Documents/Flight_Recomendor
+cd <path-to-Flight_Recomendor>
 python app.py
 ```
 

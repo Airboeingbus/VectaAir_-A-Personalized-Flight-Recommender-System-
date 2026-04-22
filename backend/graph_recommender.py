@@ -59,6 +59,7 @@ class UserSimilarityGraph:
         self.user_index = {}  # user_id → index mapping
         self.neighbors_with_scores = {}  # user_id → [(neighbor_id, similarity_score)]
         self.reliability_scores = {}  # flight_id → reliability (1 - delay_rate)
+        self.flight_interactions_index = {}  # OPTIMIZATION: flight_id → [(user_id, interaction_weight)]
         logger.info(f"Initialized HybridGraphRecommender (k={k_neighbors})")
     
     
@@ -98,10 +99,6 @@ class UserSimilarityGraph:
             if pd.isna(delay_rate):
                 delay_rate = 0
             
-            # Reliability = 1 - delay_rate (higher is better)
-            reliability = float(max(0, min(1, 1 - delay_rate)))  # Clamp to [0, 1]
-            self.reliability_scores[flight_id] = reliability
-        
             # Reliability = 1 - delay_rate (higher is better)
             reliability = float(max(0, min(1, 1 - delay_rate)))  # Clamp to [0, 1]
             self.reliability_scores[flight_id] = reliability
@@ -282,6 +279,32 @@ class UserSimilarityGraph:
         """
         Compute cosine similarity between all users.
         
+        DESIGN CHOICE: Cosine Similarity vs. Euclidean Distance
+        
+        Why Cosine Similarity for this use case:
+        1. MAGNITUDE INVARIANCE: Cosine similarity measures angle between vectors,
+           not absolute distance. This is ideal when:
+           - User features are one-hot encoded (categorical features like gender, occupation)
+           - Feature magnitude doesn't matter; only directions matter
+           - We care about similarity in feature space, not absolute values
+           
+        2. HIGH-DIMENSIONAL DATA: After one-hot encoding, feature space is high-dimensional
+           and sparse. Cosine similarity handles sparse data better than euclidean distance
+           (euclidean distance becomes unreliable in high dimensions due to concentration).
+           
+        3. NORMALIZED FEATURES: Our user features are normalized (StandardScaler to mean=0, std=1),
+           making cosine similarity directly interpretable as correlation.
+           
+        4. INTERPRETATION: Cosine similarity ∈ [−1, 1] naturally represents:
+           - 1 = identical direction (most similar users)
+           - 0 = orthogonal (independent preferences)
+           - −1 = opposite direction (opposite preferences, rare but possible)
+        
+        Alternative Considered: Euclidean Distance
+        - Better for continuous data without categorical encoding
+        - Suffers from "curse of dimensionality" in high dimensions
+        - Mixing categorical (one-hot) and continuous features makes interpretation unclear
+        
         Creates similarity_matrix: (n_users, n_users)
         """
         feature_matrix = self.build_feature_matrix()
@@ -295,6 +318,7 @@ class UserSimilarityGraph:
         Build user similarity graph with similarity scores.
         
         Creates neighbors_with_scores: user_id → [(neighbor_id, similarity_score)]
+        Also precomputes flight interaction index for recommendation efficiency.
         """
         self.neighbors_with_scores = {}
         self.user_index = {uid: i for i, uid in enumerate(self.users['user_id'].values)}
@@ -315,9 +339,45 @@ class UserSimilarityGraph:
             
             self.neighbors_with_scores[user_id] = neighbors_scores
         
+        # OPTIMIZATION: Precompute flight interaction index for faster scoring
+        self.precompute_flight_index()
+        
         logger.info(f"Built graph: {len(self.neighbors_with_scores)} users")
         logger.info(f"Neighbors per user: {self.k_neighbors}")
         logger.info(f"Using weighted scoring: Score = Σ(similarity × interaction)")
+    
+    
+    def precompute_flight_index(self) -> None:
+        """
+        OPTIMIZATION: Precompute index of flight_id -> user interactions.
+        
+        Avoids repeated DataFrame filtering during recommendation scoring.
+        Maps flight_id to list of (user_id, interaction_weight) tuples.
+        
+        This dramatically speeds up the recommend() function, especially
+        with large datasets (avoids O(n) filtering for each flight lookup).
+        """
+        self.flight_interactions_index = {}
+        
+        for _, interaction in self.interactions.iterrows():
+            flight_id = interaction['flight_id']
+            user_id = interaction['user_id']
+            
+            # Get interaction weight based on type
+            interaction_type = interaction.get('interaction_type', 'booking')
+            weight = (
+                INTERACTION_WEIGHT_BOOKING 
+                if interaction_type == 'booking' 
+                else INTERACTION_WEIGHT_VIEW
+            )
+            
+            # Add to index
+            if flight_id not in self.flight_interactions_index:
+                self.flight_interactions_index[flight_id] = []
+            
+            self.flight_interactions_index[flight_id].append((user_id, weight))
+        
+        logger.info(f"Precomputed interaction index for {len(self.flight_interactions_index)} flights")
     
     
     def get_neighbors(self, user_id: str) -> List[Tuple[str, float]]:
@@ -457,6 +517,20 @@ class UserSimilarityGraph:
         graph_score(flight) = Σ over neighbors:
                               similarity(user, neighbor) × interaction_weight(neighbor, flight)
         
+        OPTIMIZATION: Uses precomputed flight interaction index to avoid
+        repeated DataFrame filtering during scoring.
+        
+        COLD START HANDLING:
+        For new users with no neighbors or whose neighbors have no bookings, this method
+        returns an empty list. The calling endpoint (typically in app.py) should implement
+        fallback logic such as:
+        - Return popular flights (most booked across all users)
+        - Return flights with highest reliability scores
+        - Use content-based filtering on user profile features
+        
+        This separation of concerns allows the endpoint to manage multiple fallback
+        strategies without complicating the core recommender logic.
+        
         NOTE: Reliability is NOT applied here. It is applied separately in the endpoint
         as one component of a composite scoring function. This allows for proper
         weighting management and clear explainability.
@@ -471,6 +545,7 @@ class UserSimilarityGraph:
         
         Returns:
             List of (flight_id, graph_score) tuples, sorted by score descending
+            Empty list if user has no neighbors or neighbors have no bookings (cold start)
         """
         neighbors_scores = self.get_neighbors(user_id)
         if not neighbors_scores:
@@ -480,33 +555,26 @@ class UserSimilarityGraph:
         # Get user's own bookings (to exclude)
         user_bookings = self.get_user_bookings(user_id)
         
-        # Compute graph-based weighted scores for flights (pure collaborative filtering)
+        # Create neighbor lookup for O(1) access
+        neighbor_dict = {neighbor_id: sim for neighbor_id, sim in neighbors_scores}
+        
+        # OPTIMIZATION: Use precomputed flight index instead of filtering interactions
         flight_scores = {}
         
-        for neighbor_id, neighbor_similarity in neighbors_scores:
-            # Get neighbor's interactions
-            neighbor_interactions = self.interactions[
-                self.interactions['user_id'] == neighbor_id
-            ]
+        for flight_id, interactions in self.flight_interactions_index.items():
+            # Skip if user already booked this flight
+            if flight_id in user_bookings:
+                continue
             
-            for _, interaction in neighbor_interactions.iterrows():
-                flight_id = interaction['flight_id']
-                
-                # Skip if user already booked this flight
-                if flight_id in user_bookings:
-                    continue
-                
-                # Get interaction weight based on type
-                interaction_type = interaction.get('interaction_type', 'booking')
-                weight = (
-                    INTERACTION_WEIGHT_BOOKING 
-                    if interaction_type == 'booking' 
-                    else INTERACTION_WEIGHT_VIEW
-                )
-                
-                # Score = similarity × interaction_weight
-                contribution = neighbor_similarity * weight
-                flight_scores[flight_id] = flight_scores.get(flight_id, 0) + contribution
+            # Score = sum of (neighbor_similarity × interaction_weight) for all neighbors who booked
+            score = 0.0
+            for user_id_booking, interaction_weight in interactions:
+                if user_id_booking in neighbor_dict:
+                    neighbor_similarity = neighbor_dict[user_id_booking]
+                    score += neighbor_similarity * interaction_weight
+            
+            if score > 0:
+                flight_scores[flight_id] = score
         
         # Return pure graph scores (reliability applied separately in endpoint)
         recommendations = sorted(
@@ -527,6 +595,9 @@ class UserSimilarityGraph:
         
         Reweights neighbors based on how well their preferences align with the user's
         stated preferences, then computes graph scores using adjusted neighbor weights.
+        
+        OPTIMIZATION: Uses precomputed flight interaction index to avoid
+        repeated DataFrame filtering during scoring.
         
         Algorithm:
         adjusted_similarity = 0.7 * structural_similarity + 0.3 * preference_agreement
@@ -550,33 +621,26 @@ class UserSimilarityGraph:
         # Get user's own bookings (to exclude)
         user_bookings = self.get_user_bookings(user_id)
         
-        # Compute graph-based weighted scores using adjusted neighbors
+        # Create neighbor lookup for O(1) access
+        neighbor_dict = {neighbor_id: sim for neighbor_id, sim in neighbors_scores}
+        
+        # OPTIMIZATION: Use precomputed flight index instead of filtering interactions
         flight_scores = {}
         
-        for neighbor_id, adjusted_similarity in neighbors_scores:
-            # Get neighbor's interactions
-            neighbor_interactions = self.interactions[
-                self.interactions['user_id'] == neighbor_id
-            ]
+        for flight_id, interactions in self.flight_interactions_index.items():
+            # Skip if user already booked this flight
+            if flight_id in user_bookings:
+                continue
             
-            for _, interaction in neighbor_interactions.iterrows():
-                flight_id = interaction['flight_id']
-                
-                # Skip if user already booked this flight
-                if flight_id in user_bookings:
-                    continue
-                
-                # Get interaction weight based on type
-                interaction_type = interaction.get('interaction_type', 'booking')
-                weight = (
-                    INTERACTION_WEIGHT_BOOKING 
-                    if interaction_type == 'booking' 
-                    else INTERACTION_WEIGHT_VIEW
-                )
-                
-                # Score = adjusted_similarity × interaction_weight
-                contribution = adjusted_similarity * weight
-                flight_scores[flight_id] = flight_scores.get(flight_id, 0) + contribution
+            # Score = sum of (adjusted_neighbor_similarity × interaction_weight) for all neighbors who booked
+            score = 0.0
+            for user_id_booking, interaction_weight in interactions:
+                if user_id_booking in neighbor_dict:
+                    adjusted_similarity = neighbor_dict[user_id_booking]
+                    score += adjusted_similarity * interaction_weight
+            
+            if score > 0:
+                flight_scores[flight_id] = score
         
         # Return graph scores (preference-adjusted)
         recommendations = sorted(

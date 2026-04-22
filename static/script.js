@@ -442,6 +442,4 @@ clearError();
 // Initial state
 hideResults();
 clearError();
-loginPanel.classList.remove('hidden');
-preferencesPanel.classList.add('hidden');
 

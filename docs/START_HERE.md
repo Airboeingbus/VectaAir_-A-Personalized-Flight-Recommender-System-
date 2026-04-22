@@ -27,7 +27,7 @@ Flight_Recomendor/
 
 ### 1️⃣ Navigate to project directory
 ```bash
-cd /home/s-p-shaktivell-sunder/Documents/Flight_Recomendor
+cd Flight_Recomendor  # Navigate to the project root
 ```
 
 ### 2️⃣ Activate virtual environment

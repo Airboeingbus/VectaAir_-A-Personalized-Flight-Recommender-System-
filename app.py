@@ -126,31 +126,31 @@ def login():
         user_id = str(data.get('user_id', '')).strip()
         password = str(data.get('password', '')).strip()
         
-        print(f"Login attempt: user_id='{user_id}', password='{password}'")
-        print(f"Available users: {list(users_db.keys())}")
+        logger.debug(f"Login attempt: user_id='{user_id}'")
+        logger.debug(f"Available users: {list(users_db.keys())}")
         
         if not user_id or not password:
             return jsonify({"success": False, "error": "Missing credentials"}), 400
         
         if user_id not in users_db:
-            print(f"User {user_id} not found in database")
+            logger.warning(f"User {user_id} not found in database")
             return jsonify({"success": False, "error": "Invalid credentials"}), 401
         
         stored_data = users_db[user_id]
         stored_password = str(stored_data['password']).strip() if isinstance(stored_data, dict) else str(stored_data).strip()
         
-        print(f"Stored password: '{stored_password}', Provided password: '{password}'")
+        logger.debug(f"Stored password check for user {user_id}")
         
         if stored_password == password:
             session['user_id'] = user_id
-            print(f"Login successful for {user_id}")
+            logger.info(f"Login successful for {user_id}")
             return jsonify({"success": True, "user_id": user_id, "redirect": url_for('search')}), 200
         else:
-            print(f"Password mismatch for {user_id}")
+            logger.warning(f"Password mismatch for {user_id}")
             return jsonify({"success": False, "error": "Invalid credentials"}), 401
     
     except Exception as e:
-        print(f"Login error: {e}")
+        logger.error(f"Login error: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 

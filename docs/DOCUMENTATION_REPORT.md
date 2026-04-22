@@ -24,7 +24,7 @@ The Flight Recommender System is **fully documented** with comprehensive guides 
 
 ### 1. **README.md** (Documentation Index)
 ✅ **Status:** Created and Verified
-- **Location:** `/home/s-p-shaktivell-sunder/Documents/Flight_Recomendor/docs/README.md`
+- **Location:** `./docs/README.md`
 - **Size:** 400+ lines
 - **Purpose:** Central index for all documentation
 
@@ -38,7 +38,7 @@ The Flight Recommender System is **fully documented** with comprehensive guides 
 
 ### 2. **GETTING_STARTED.md** (Installation & Quick Start)
 ✅ **Status:** Created and Verified
-- **Location:** `/home/s-p-shaktivell-sunder/Documents/Flight_Recomendor/docs/GETTING_STARTED.md`
+- **Location:** `./docs/GETTING_STARTED.md`
 - **Size:** 1,200+ lines
 - **Purpose:** Quick start and setup guide
 
@@ -64,7 +64,7 @@ The Flight Recommender System is **fully documented** with comprehensive guides 
 
 ### 3. **API_DOCUMENTATION.md** (Complete API Reference)
 ✅ **Status:** Created and Verified
-- **Location:** `/home/s-p-shaktivell-sunder/Documents/Flight_Recomendor/docs/API_DOCUMENTATION.md`
+- **Location:** `./docs/API_DOCUMENTATION.md`
 - **Size:** 1,000+ lines
 - **Purpose:** Complete API reference for all recommenders
 
@@ -104,7 +104,7 @@ The Flight Recommender System is **fully documented** with comprehensive guides 
 
 ### 4. **ARCHITECTURE.md** (System Design & Algorithms)
 ✅ **Status:** Created and Verified
-- **Location:** `/home/s-p-shaktivell-sunder/Documents/Flight_Recomendor/docs/ARCHITECTURE.md`
+- **Location:** `./docs/ARCHITECTURE.md`
 - **Size:** 1,500+ lines
 - **Purpose:** Deep technical architecture documentation
 
@@ -252,7 +252,7 @@ Graph Recommender Module:
 
 All documentation files are located in:
 ```
-/home/s-p-shaktivell-sunder/Documents/Flight_Recomendor/docs/
+./docs/
 ├── README.md                    # Documentation index
 ├── GETTING_STARTED.md           # Setup & quick start
 ├── API_DOCUMENTATION.md         # Complete API reference

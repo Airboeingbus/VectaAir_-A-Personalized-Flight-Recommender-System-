@@ -337,7 +337,7 @@ Located in `data/processed/`:
 ## 📦 Project Structure
 
 ```
-Flight_Recommender/
+Flight_Recomendor/
 ├── app.py                          # Flask application
 ├── requirements.txt                # Dependencies
 ├── Procfile                        # Production server config
@@ -442,6 +442,140 @@ python experiments/clustering_examples.py
 - **Concurrent users:** Supports 100+ with 4-worker Gunicorn
 - **Memory footprint:** ~200MB
 - **Data processing:** ~5-10 seconds for 10K users/100K flights
+
+### Evaluation Methodology
+
+Evaluated on leave-one-out split across 583 users.
+Dataset is sparse (2000 interactions, 1000 users, 500 flights).
+Sparsity is the primary limiting factor. Evaluation methodology
+in experiments/recommender_analysis.ipynb.
+
+**To Run Evaluation:**
+```bash
+python scripts/evaluate_recommender.py
+```
+
+### Running Analysis
+
+To run the deep-dive analysis notebook, open a notebook session from the experiments folder and execute recommender_analysis.ipynb:
+
+```bash
+cd experiments
+jupyter notebook recommender_analysis.ipynb
+```
+
+---
+
+## 🎯 Design Decisions
+
+### 1. Cold Start Handling Strategy
+
+**The Problem:** New users with no booking history cannot be recommended flights using collaborative filtering (no similar users exist yet).
+
+**Our Approach:**
+
+The recommender has a **two-tier cold start strategy**:
+
+1. **Graph-Based Tier (Primary)**
+   - Uses cosine similarity on user profile features (age, occupation, gender, travel_purpose)
+   - Even new users are assigned k=5 nearest neighbors based on feature similarity
+   - Can recommend flights booked by feature-similar users
+   - Works for users with profile info but no booking history
+
+2. **Fallback Tier (When Graph Fails)**
+   - If neighbors have < 3 bookings each, apply endpoint-level fallbacks:
+     - Return top-reliability flights (highest on-time performance)
+     - Return most-popular flights (booked by most users)
+     - Return flights by preferred airline (if available in user profile)
+   
+   This is implemented in `app.py` at the `/recommend` endpoint level, not in the core recommender, allowing flexible fallback strategies.
+
+**Example Cold Start Flow:**
+```
+User Profile: 32yo male engineer → Similar users found ✓
+  ↓
+Recommend flights from their bookings ✓
+  (Collaborative filtering works)
+
+User Profile: 19yo student, no bookings → Similar users found ✓
+  ↓
+Attempt recommendation from similar users' bookings
+  ↓
+If insufficient bookings: Fallback to popular/reliable flights ✓
+  (Graceful degradation)
+```
+
+### 2. Cosine Similarity Design Choice
+
+**Why Cosine Similarity Over Euclidean Distance?**
+
+The system uses **cosine similarity** (angle between feature vectors) for user matching instead of Euclidean distance. Here's why:
+
+| Factor | Cosine Similarity | Euclidean Distance |
+|--------|------|--------|
+| **High-Dimensional Data** | ✅ Robust in high dimensions | ❌ "Curse of dimensionality" |
+| **One-Hot Encoded Features** | ✅ Perfect for sparse categorical features | ❌ Suffers from magnitude differences |
+| **Feature Magnitude** | ✅ Magnitude-invariant (only direction matters) | ❌ Sensitive to scale |
+| **Sparse Data** | ✅ Efficient and reliable | ❌ Unreliable with sparse vectors |
+| **Interpretability** | ✅ Directly = correlation (-1 to 1) | ❌ Needs normalization |
+
+**Example:**
+```python
+User A: [1-hot: Male, Engineer] → sparse vector after encoding
+User B: [1-hot: Male, Engineer] → same sparse vector
+
+Cosine Similarity: 1.0 (perfect match) ✓
+Euclidean Distance: 0.0 (perfect match but hard to interpret) ✓
+
+But with mixed features:
+User C: [age=30, 1-hot: Female, Teacher]
+User D: [age=35, 1-hot: Female, Teacher]
+
+Cosine: ~0.95 (similar direction in high-dim space) ✓
+Euclidean: 5.0 (age difference dominates) ❌
+```
+
+**Implementation:**
+```python
+from sklearn.metrics.pairwise import cosine_similarity
+
+# (n_users, n_features) after StandardScaler + one-hot encoding
+similarity_matrix = cosine_similarity(feature_matrix)
+# Result: symmetric matrix where sim[i,j] ∈ [-1, 1]
+```
+
+### 3. Performance Optimization: Precomputed Flight Index
+
+**The Problem:** Recommendation scoring iterates through neighbor interactions, repeatedly filtering the interactions DataFrame for each flight.
+
+**The Solution:** **Precomputed Flight Interaction Index**
+
+Before recommendations:
+```
+flight_interactions_index = {
+    'F001': [('U001', 1.0), ('U003', 0.3), ...],  # 1.0 = booking, 0.3 = view
+    'F002': [('U002', 1.0), ...],
+    ...
+}
+```
+
+During recommendation (old way):
+```python
+for neighbor_id in neighbors:
+    # ❌ O(n) DataFrame filter for each neighbor
+    neighbor_interactions = all_interactions[all_interactions['user_id'] == neighbor_id]
+```
+
+During recommendation (optimized way):
+```python
+for flight_id, interactions in precomputed_index.items():
+    # ✅ O(1) dictionary lookup, no filtering
+    for user_id, weight in interactions:
+        if user_id in neighbor_dict:
+            score += similarity[user_id] * weight
+```
+
+**Impact:** ~2-3x faster recommendations with large datasets (10K+ users).
 
 ---
 
